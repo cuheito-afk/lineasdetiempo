@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Líneas de Tiempo — Práctica Docente 1</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f7f7f5;
+    color: #222;
+    padding: 2rem 1rem;
+  }
+  h1 {
+    text-align: center;
+    font-size: 22px;
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 0.4rem;
+  }
+  .subtitle {
+    text-align: center;
+    font-size: 14px;
+    color: #777;
+    margin-bottom: 2rem;
+  }
+  .tl-wrap { max-width: 900px; margin: 0 auto; }
+  .tl-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 1.5rem;
+    justify-content: center;
+  }
+  .tl-tab {
+    padding: 7px 18px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1.5px solid #ccc;
+    background: #fff;
+    color: #555;
+    transition: all .2s;
+  }
+  .tl-tab:hover { border-color: #999; color: #333; }
+  .tl-tab.active { color: #fff; border-color: transparent; }
+  .tab-mila.active   { background: #C8498A; }
+  .tab-pau.active    { background: #3B8FD4; }
+  .tab-fabian.active { background: #2E9E7A; }
+  .tab-julia.active  { background: #B07A2A; }
+  .tab-todos.active  { background: #5D4BB5; }
+
+  .tl-section { display: none; }
+  .tl-section.visible { display: block; }
+
+  .tl-title {
+    font-size: 15px;
+    font-weight: 500;
+    color: #555;
+    margin-bottom: 1rem;
+    padding: 0 1rem;
+  }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 0 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 500;
+    margin-top: 5px;
+    margin-right: 2px;
+  }
+  .tag-positivo     { background: #D4F0E3; color: #0F6E56; }
+  .tag-desafio      { background: #FCEAEA; color: #A32D2D; }
+  .tag-economico    { background: #F0E8FC; color: #534AB7; }
+  .tag-descubrimiento { background: #D4EAF7; color: #185FA5; }
+  .tag-logro        { background: #FFF3D4; color: #854F0B; }
+  .tag-social       { background: #FAEDF5; color: #993556; }
+  .tag-pandemia     { background: #F0F0F0; color: #5F5E5A; }
+  .tag-docente      { background: #E8F5E4; color: #3B6D11; }
+
+  .persona-badge {
+    display: inline-block;
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    margin-right: 4px;
+    vertical-align: middle;
+  }
+  .legend-personas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 0 1rem;
+    margin-bottom: 0.6rem;
+    font-size: 12px;
+    color: #555;
+    align-items: center;
+  }
+
+  /* ── Timeline layout ── */
+  .timeline {
+    position: relative;
+    padding: 0 1rem 2rem;
+  }
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0; bottom: 0;
+    width: 2px;
+    background: #e0e0e0;
+    transform: translateX(-50%);
+  }
+  .tl-item {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+    position: relative;
+  }
+  .tl-item:nth-child(odd)  { flex-direction: row-reverse; }
+  .tl-item:nth-child(even) { flex-direction: row; }
+
+  .tl-content {
+    width: 44%;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid #e0e0e0;
+    background: #fff;
+    font-size: 13px;
+    line-height: 1.55;
+    color: #222;
+  }
+  .tl-item:nth-child(odd)  .tl-content { margin-right: 6%; }
+  .tl-item:nth-child(even) .tl-content { margin-left: 6%; }
+
+  .tl-dot {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    border: 2px solid #f7f7f5;
+    z-index: 2;
+    margin-top: 12px;
+  }
+  .tl-year {
+    font-weight: 500;
+    font-size: 12px;
+    margin-bottom: 4px;
+    color: #888;
+  }
+  .tl-text { font-size: 12.5px; }
+
+  /* colored left-border variants */
+  .border-mila   { border-left: 3px solid #C8498A !important; }
+  .border-pau    { border-left: 3px solid #3B8FD4 !important; }
+  .border-fabian { border-left: 3px solid #2E9E7A !important; }
+  .border-julia  { border-left: 3px solid #B07A2A !important; }
+  .border-todos  { border-left: 3px solid #5D4BB5 !important; }
+  .border-social { border-left: 3px solid #bbb !important; }
+
+  @media (max-width: 600px) {
+    .timeline::before { left: 18px; }
+    .tl-item,
+    .tl-item:nth-child(odd),
+    .tl-item:nth-child(even) {
+      flex-direction: column;
+      padding-left: 38px;
+    }
+    .tl-content,
+    .tl-item:nth-child(odd)  .tl-content,
+    .tl-item:nth-child(even) .tl-content {
+      width: 100%;
+      margin: 0;
+    }
+    .tl-dot { left: 18px; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Líneas de Tiempo — Práctica Docente 1</h1>
+<p class="subtitle">Trayectorias educativas y vitales · Milagros · Pau · Fabián · Julia</p>
+
+<div class="tl-wrap">
+  <div class="tl-tabs">
+    <button class="tl-tab tab-mila active"   onclick="show('mila',this)">Milagros</button>
+    <button class="tl-tab tab-pau"           onclick="show('pau',this)">Pau</button>
+    <button class="tl-tab tab-fabian"        onclick="show('fabian',this)">Fabián</button>
+    <button class="tl-tab tab-julia"         onclick="show('julia',this)">Julia</button>
+    <button class="tl-tab tab-todos"         onclick="show('todos',this)">Línea compartida</button>
+  </div>
+
+  <!-- ══════════════════════════════
+       MILAGROS
+  ══════════════════════════════ -->
+  <div id="sec-mila" class="tl-section visible">
+    <div class="tl-title">Milagros Frontané — trayectoria educativa y vital</div>
+    <div class="legend">
+      <span class="tag tag-positivo">positivo</span>
+      <span class="tag tag-desafio">desafío</span>
+      <span class="tag tag-economico">económico</span>
+      <span class="tag tag-descubrimiento">descubrimiento</span>
+      <span class="tag tag-logro">logro</span>
+      <span class="tag tag-social">contexto social</span>
+      <span class="tag tag-docente">vocación docente</span>
+    </div>
+    <div class="timeline">
+
+      <div class="tl-item"><div class="tl-dot" style="background:#C8498A"></div>
+        <div class="tl-content">
+          <div class="tl-year">2007</div>
+          <div class="tl-text">Ingresa a primer grado. Maestras dulces y empáticas. Usa libros para aprender.</div>
+          <span class="tag tag-positivo">positivo</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#C8498A"></div>
+        <div class="tl-content">
+          <div class="tl-year">2009</div>
+          <div class="tl-text">Sus padres compran una PC de escritorio. Primera experiencia con computadoras e internet — uso recreativo, no educativo.</div>
+          <span class="tag tag-descubrimiento">descubrimiento</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#888"></div>
+        <div class="tl-content">
+          <div class="tl-year">2012</div>
+          <div class="tl-text">Implementación del Boleto Educativo Gratuito en Córdoba (De la Sota). Largas colas en la terminal.</div>
+          <span class="tag tag-economico">económico</span>
+          <span class="tag tag-social">contexto social</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#C8498A"></div>
+        <div class="tl-content">
+          <div class="tl-year">2013</div>
+          <div class="tl-text">Comienza el secundario. Su mamá vence el cáncer de mama. Saqueos en diciembre. Adaptación dura pero acompañada. Buena en inglés, lengua y cs. sociales.</div>
+          <span class="tag tag-desafio">desafío</span>
+          <span class="tag tag-positivo">positivo</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#C8498A"></div>
+        <div class="tl-content">
+          <div class="tl-year">2014</div>
+          <div class="tl-text">Primeras amonestaciones. Conflicto con docente de matemática. Comienza alemán de manera autodidacta. Descubre facilidad para los idiomas.</div>
+          <span class="tag tag-desafio">desafío</span>
+          <span class="tag tag-descubrimiento">descubrimiento</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#888"></div>
+        <div class="tl-content">
+          <div class="tl-year">2015</div>
+          <div class="tl-text">Macri gana las elecciones presidenciales.</div>
+          <span class="tag tag-social">contexto social</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#C8498A"></div>
+        <div class="tl-content">
+          <div class="tl-year">2018</div>
+          <div class="tl-text">Termina el secundario. Asiste a muestra de carreras — el Pabellón Argentina de la UNC estaba tomado por el conflicto Macri/educación pública.</div>
+          <span class="tag tag-logro">logro</span>
+          <span class="tag tag-social">contexto social</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#888"></div>
+        <div class="tl-content">
+          <div class="tl-year">2020</div>
+          <div class="tl-text">Pandemia Covid-19. Dos clases presenciales y luego educación 100% virtual. Fallecimiento de Maradona.</div>
+          <span class="tag tag-pandemia">pandemia</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#888"></div>
+        <div class="tl-content">
+          <div class="tl-year">2022</div>
+          <div class="tl-text">Argentina gana el mundial. Messi levanta la copa.</div>
+          <span class="tag tag-social">contexto social</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#888"></div>
+        <div class="tl-content">
+          <div class="tl-year">2023</div>
+          <div class="tl-text">Milei gana las elecciones. Clima tenso. Temor por avance de discursos de odio y privatización de universidades.</div>
+          <span class="tag tag-social">contexto social</span>
+          <span class="tag tag-desafio">desafío</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#888"></div>
+        <div class="tl-content">
+          <div class="tl-year">2024</div>
+          <div class="tl-text">Nuevo conflicto universidades/gobierno Milei. Dos marchas federales en defensa de la educación pública.</div>
+          <span class="tag tag-social">contexto social</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#C8498A"></div>
+        <div class="tl-content">
+          <div class="tl-year">2025</div>
+          <div class="tl-text">Obtiene su primer título universitario. Termina de cursar la licenciatura. Ve a Lali Espósito en Córdoba y Corrientes. Inicia el profesorado universitario por primera vez.</div>
+          <span class="tag tag-logro">logro</span>
+          <span class="tag tag-docente">vocación docente</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════
+       PAU
+  ══════════════════════════════ -->
+  <div id="sec-pau" class="tl-section">
+    <div class="tl-title">Pau — trayectoria educativa y vital</div>
+    <div class="legend">
+      <span class="tag tag-positivo">positivo</span>
+      <span class="tag tag-desafio">desafío</span>
+      <span class="tag tag-economico">económico</span>
+      <span class="tag tag-descubrimiento">descubrimiento</span>
+      <span class="tag tag-logro">logro</span>
+      <span class="tag tag-social">contexto social</span>
+    </div>
+    <div class="timeline">
+
+      <div class="tl-item"><div class="tl-dot" style="background:#3B8FD4"></div>
+        <div class="tl-content">
+          <div class="tl-year">2001</div>
+          <div class="tl-text">Jardín maternal Colores, Río Tercero. Aprende a andar en bici. Contexto de crisis económica nacional — sus padres jóvenes afrontando incertidumbre con una hija pequeña.</div>
+          <span class="tag tag-positivo">positivo</span>
+          <span class="tag tag-economico">económico</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#3B8FD4"></div>
+        <div class="tl-content">
+          <div class="tl-year">2003</div>
+          <div class="tl-text">Comienza escolaridad en la Escuela Remedios Escalada de San Martín. Maestra Karina: cuaderno-diario de miedos y sueños. Primer contacto con la memoria colectiva (explosiones del '95). Le gusta bailar en las veladas.</div>
+          <span class="tag tag-positivo">positivo</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#3B8FD4"></div>
+        <div class="tl-content">
+          <div class="tl-year">2007</div>
+          <div class="tl-text">Nace su hermano Juan José. Deja de ser hija única. Cámara digital, Los Sims, internet con ruido para prenderse.</div>
+          <span class="tag tag-descubrimiento">descubrimiento</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#3B8FD4"></div>
+        <div class="tl-content">
+          <div class="tl-year">2009</div>
+          <div class="tl-text">Termina la primaria. Presión materna para ser la mejor alumna. No sale sorteada en la ENET. Rinde examen de ingreso a cole privado con beca. Lo logra.</div>
+          <span class="tag tag-desafio">desafío</span>
+          <span class="tag tag-logro">logro</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#3B8FD4"></div>
+        <div class="tl-content">
+          <div class="tl-year">2010</div>
+          <div class="tl-text">Ingresa al Instituto Carlos Saavedra Lamas. Presidenta del centro de estudiantes, becada 6 años, Modelos ONU, exámenes internacionales de inglés. Un test vocacional la acerca a Comunicación Social.</div>
+          <span class="tag tag-descubrimiento">descubrimiento</span>
+          <span class="tag tag-positivo">positivo</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#3B8FD4"></div>
+        <div class="tl-content">
+          <div class="tl-year">2016</div>
+          <div class="tl-text">Se muda a Córdoba capital. Monoambiente-pasillo. Conoce a sus mejores amigos y a su novio. La universidad pública le abre la cabeza y la saca (un poco) de la ignorancia.</div>
+          <span class="tag tag-descubrimiento">descubrimiento</span>
+          <span class="tag tag-positivo">positivo</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#3B8FD4"></div>
+        <div class="tl-content">
+          <div class="tl-year">2021</div>
+          <div class="tl-text">Ya licenciada y trabajando.</div>
+          <span class="tag tag-logro">logro</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════
+       FABIÁN
+  ══════════════════════════════ -->
+  <div id="sec-fabian" class="tl-section">
+    <div class="tl-title">Fabián Alberto Cabaña — trayectoria educativa y vital</div>
+    <div class="legend">
+      <span class="tag tag-positivo">positivo</span>
+      <span class="tag tag-desafio">desafío</span>
+      <span class="tag tag-economico">económico</span>
+      <span class="tag tag-descubrimiento">descubrimiento</span>
+      <span class="tag tag-logro">logro</span>
+      <span class="tag tag-social">contexto social</span>
+      <span class="tag tag-docente">vocación docente</span>
+    </div>
+    <div class="timeline">
+
+      <div class="tl-item"><div class="tl-dot" style="background:#2E9E7A"></div>
+        <div class="tl-content">
+          <div class="tl-year">1998</div>
+          <div class="tl-text">Comienza jardín de infantes. Disfruta los juegos, pero querer jugar con muñecas lo hace sentir raro y confundido. La escuela se vuelve hostil a veces.</div>
+          <span class="tag tag-desafio">desafío</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#2E9E7A"></div>
+        <div class="tl-content">
+          <div class="tl-year">2002</div>
+          <div class="tl-text">Repite cuarto grado. Problemas de conducta ligados a la frustración. Contexto familiar con muchas necesidades materiales y económicas.</div>
+          <span class="tag tag-desafio">desafío</span>
+          <span class="tag tag-economico">económico</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#2E9E7A"></div>
+        <div class="tl-content">
+          <div class="tl-year">2004</div>
+          <div class="tl-text">La familia se muda a Córdoba capital. Gran cambio de lo rural a lo urbano. Nueva escuela sin loras ni eucaliptos. Conoce los peligros de la ciudad.</div>
+          <span class="tag tag-desafio">desafío</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#2E9E7A"></div>
+        <div class="tl-content">
+          <div class="tl-year">2005</div>
+          <div class="tl-text">Se convierte en estudiante dedicado. Termina la primaria como primer escolta, con ganas de ir al secundario.</div>
+          <span class="tag tag-logro">logro</span>
+          <span class="tag tag-positivo">positivo</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#2E9E7A"></div>
+        <div class="tl-content">
+          <div class="tl-year">2006</div>
+          <div class="tl-text">Bullying en el secundario por ser inteligente y "el raro". Aprende a defenderse. Experiencia dura.</div>
+          <span class="tag tag-desafio">desafío</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#2E9E7A"></div>
+        <div class="tl-content">
+          <div class="tl-year">2009–2011</div>
+          <div class="tl-text">Cambia al IPEM 153, especialidad comunicación. Primero escolta otra vez. Radio, producciones audiovisuales, escritura periodística, feria de ciencias. Conoce amigos que perduran hasta hoy. Conoce el mar.</div>
+          <span class="tag tag-descubrimiento">descubrimiento</span>
+          <span class="tag tag-positivo">positivo</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#2E9E7A"></div>
+        <div class="tl-content">
+          <div class="tl-year">2012</div>
+          <div class="tl-text">Ingresa a la ECI (UNC). Primer miembro de su familia en terminar el secundario y entrar a la universidad. Primer año muy bien, pero la familia prioriza el trabajo ante las necesidades económicas.</div>
+          <span class="tag tag-logro">logro</span>
+          <span class="tag tag-economico">económico</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#2E9E7A"></div>
+        <div class="tl-content">
+          <div class="tl-year">2013</div>
+          <div class="tl-text">Deja la ECI. Se inscribe en la Tecnicatura en Seguridad Comunitaria (Policía). Trabaja y estudia al mismo tiempo. Mucho cansancio, sin régimen de alumno trabajador.</div>
+          <span class="tag tag-desafio">desafío</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#888"></div>
+        <div class="tl-content">
+          <div class="tl-year">2020</div>
+          <div class="tl-text">Pandemia. Estaba en clase de Comunicación Institucional cuando se decretó el ASPO. Le costaba la virtualidad. Experiencia que lo marcó para siempre.</div>
+          <span class="tag tag-pandemia">pandemia</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#2E9E7A"></div>
+        <div class="tl-content">
+          <div class="tl-year">2023</div>
+          <div class="tl-text">Aprueba Comunicación Institucional — la materia que lo había hecho abandonar la carrera en 2017. Gran empujón. Desde ahí no para.</div>
+          <span class="tag tag-logro">logro</span>
+          <span class="tag tag-positivo">positivo</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#2E9E7A"></div>
+        <div class="tl-content">
+          <div class="tl-year">2025</div>
+          <div class="tl-text">23 de septiembre: termina de aprobar todas las materias de la Licenciatura en Comunicación. Primer graduado universitario de su familia. Nació en pobreza extrema. Una gran hazaña.</div>
+          <span class="tag tag-logro">logro</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#2E9E7A"></div>
+        <div class="tl-content">
+          <div class="tl-year">2026</div>
+          <div class="tl-text">Empieza el profesorado universitario en Comunicación Social. Se imagina construyendo conocimiento con CENMA. Quiere ser profe.</div>
+          <span class="tag tag-docente">vocación docente</span>
+          <span class="tag tag-descubrimiento">descubrimiento</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════
+       JULIA
+  ══════════════════════════════ -->
+  <div id="sec-julia" class="tl-section">
+    <div class="tl-title">Julia — trayectoria educativa y vital</div>
+    <div class="legend">
+      <span class="tag tag-positivo">positivo</span>
+      <span class="tag tag-desafio">desafío</span>
+      <span class="tag tag-economico">económico</span>
+      <span class="tag tag-descubrimiento">descubrimiento</span>
+      <span class="tag tag-logro">logro</span>
+      <span class="tag tag-social">contexto social</span>
+      <span class="tag tag-docente">vocación docente</span>
+    </div>
+    <div class="timeline">
+
+      <div class="tl-item"><div class="tl-dot" style="background:#B07A2A"></div>
+        <div class="tl-content">
+          <div class="tl-year">1989</div>
+          <div class="tl-text">Empieza el jardín en escuela privada bilingüe (inglés). Recién fundada, accesible para padres empleados estatales con esfuerzo.</div>
+          <span class="tag tag-positivo">positivo</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#B07A2A"></div>
+        <div class="tl-content">
+          <div class="tl-year">1992</div>
+          <div class="tl-text">Toda la primaria con felicidad. Actividades extracurriculares como coro. Descubre el amor por la música gracias a una maestra que enseña canciones de los Beatles.</div>
+          <span class="tag tag-positivo">positivo</span>
+          <span class="tag tag-descubrimiento">descubrimiento</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#888"></div>
+        <div class="tl-content">
+          <div class="tl-year">1993</div>
+          <div class="tl-text">CECOR/LECOR de Angeloz. Cese de pago a estatales. Peligro de cambio de escuela. La situación familiar es dura. La escuela, su refugio. Doble escolaridad: aprendizaje, diversión, contención.</div>
+          <span class="tag tag-economico">económico</span>
+          <span class="tag tag-positivo">positivo</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#B07A2A"></div>
+        <div class="tl-content">
+          <div class="tl-year">1995</div>
+          <div class="tl-text">Cambio de modalidades: no hay más séptimo grado. Pasa de sexto directo al secundario. Escolta de la bandera en el egreso de primaria.</div>
+          <span class="tag tag-logro">logro</span>
+          <span class="tag tag-social">contexto social</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#B07A2A"></div>
+        <div class="tl-content">
+          <div class="tl-year">1996</div>
+          <div class="tl-text">Se adapta al secundario, excepto por matemática. Su único 1. Decide dedicarle tiempo extra y termina siendo de sus mejores promedios. Un profe la introduce al rock nacional.</div>
+          <span class="tag tag-desafio">desafío</span>
+          <span class="tag tag-descubrimiento">descubrimiento</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#B07A2A"></div>
+        <div class="tl-content">
+          <div class="tl-year">1999</div>
+          <div class="tl-text">Ciclo orientado en humanidades. Filosofía, RRII. Modelos OAJNU con menciones y distinciones. Piensa seguir Relaciones Internacionales.</div>
+          <span class="tag tag-positivo">positivo</span>
+          <span class="tag tag-descubrimiento">descubrimiento</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#888"></div>
+        <div class="tl-content">
+          <div class="tl-year">2001</div>
+          <div class="tl-text">Crisis 2001. Egresa semanas antes del estallido. Fotos con buzo de egresada en un cacerolazo. Se va a la UNC pública con alivio económico familiar.</div>
+          <span class="tag tag-social">contexto social</span>
+          <span class="tag tag-logro">logro</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#B07A2A"></div>
+        <div class="tl-content">
+          <div class="tl-year">2002</div>
+          <div class="tl-text">Estudia abogacía en la UNC. Le apasiona el derecho penal y DDHH. Crisis vocacional tras el fallecimiento de un profe referente.</div>
+          <span class="tag tag-desafio">desafío</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#B07A2A"></div>
+        <div class="tl-content">
+          <div class="tl-year">2004</div>
+          <div class="tl-text">Empieza Comunicación Social. Le encanta. Sostiene ambas carreras. Explora talleres de danza, fotografía, canto, poesía.</div>
+          <span class="tag tag-descubrimiento">descubrimiento</span>
+          <span class="tag tag-positivo">positivo</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#B07A2A"></div>
+        <div class="tl-content">
+          <div class="tl-year">2008</div>
+          <div class="tl-text">Entra a trabajar en Tribunales por concurso. Entra en un coro. Expansión cultural y políticas públicas. Sus 20s en Córdoba como una explosión artística.</div>
+          <span class="tag tag-positivo">positivo</span>
+          <span class="tag tag-descubrimiento">descubrimiento</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#B07A2A"></div>
+        <div class="tl-content">
+          <div class="tl-year">2011</div>
+          <div class="tl-text">Se recibe en octubre. Tesis sobre una escuela rural con beca provincial. Desborda de felicidad. Lo siente un logro total y un alivio enorme.</div>
+          <span class="tag tag-logro">logro</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#B07A2A"></div>
+        <div class="tl-content">
+          <div class="tl-year">2012</div>
+          <div class="tl-text">Entra a un grupo de investigación jóvenes-TIC-comunicación-educación. Empieza a dar clases en secundario. Descubre que ser docente le genera creatividad y entusiasmo.</div>
+          <span class="tag tag-descubrimiento">descubrimiento</span>
+          <span class="tag tag-docente">vocación docente</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#B07A2A"></div>
+        <div class="tl-content">
+          <div class="tl-year">2014</div>
+          <div class="tl-text">Nace su hijo. Suelta grupos de investigación y cursos. Al volver, solo a dar clases. Le sigue gustando.</div>
+          <span class="tag tag-positivo">positivo</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#B07A2A"></div>
+        <div class="tl-content">
+          <div class="tl-year">2016</div>
+          <div class="tl-text">Empieza el profesorado con hijo pequeño. Sin régimen de estudiante con familiar a cargo. Muy demandante. Deja al año siguiente.</div>
+          <span class="tag tag-desafio">desafío</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#B07A2A"></div>
+        <div class="tl-content">
+          <div class="tl-year">2019</div>
+          <div class="tl-text">Se va a vivir a las afueras de Córdoba. Renuncia a la titularidad. Proyecto autogestivo de astrología: talleres, lecturas performáticas, escritura, viajes.</div>
+          <span class="tag tag-descubrimiento">descubrimiento</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#888"></div>
+        <div class="tl-content">
+          <div class="tl-year">2020</div>
+          <div class="tl-text">Pandemia. Crece su proyecto en virtualidad y redes. Escribe un fanzine y una agenda.</div>
+          <span class="tag tag-pandemia">pandemia</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#B07A2A"></div>
+        <div class="tl-content">
+          <div class="tl-year">2021–2022</div>
+          <div class="tl-text">Escribe y publica su primer libro. Se hace cargo de la edición, venta y presentación. Lo presenta en la Feria del Libro de Córdoba 2022.</div>
+          <span class="tag tag-logro">logro</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#888"></div>
+        <div class="tl-content">
+          <div class="tl-year">2023</div>
+          <div class="tl-text">Milei gana las elecciones. Caída estrepitosa de ingresos. Se cansa de la autogestión.</div>
+          <span class="tag tag-social">contexto social</span>
+          <span class="tag tag-economico">económico</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#888"></div>
+        <div class="tl-content">
+          <div class="tl-year">2024</div>
+          <div class="tl-text">Plan de ajuste del Estado. Talleres de escritura con Territorio Colaborativo (ad honorem). Ingresos insostenibles por momentos.</div>
+          <span class="tag tag-economico">económico</span>
+          <span class="tag tag-desafio">desafío</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#B07A2A"></div>
+        <div class="tl-content">
+          <div class="tl-year">2025</div>
+          <div class="tl-text">Inicia Maestría en Investigación en Artes (UNA, virtual). Adscripción en la FCC. Retoma el profesorado universitario. Exigencia muy alta con hijo, trabajo precario y coyuntura del país. Logra promocionar una materia con mucho esfuerzo.</div>
+          <span class="tag tag-descubrimiento">descubrimiento</span>
+          <span class="tag tag-desafio">desafío</span>
+          <span class="tag tag-docente">vocación docente</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════
+       LÍNEA COMPARTIDA
+  ══════════════════════════════ -->
+  <div id="sec-todos" class="tl-section">
+    <div class="tl-title">Línea compartida — momentos en común y contexto sociohistórico</div>
+    <div class="legend-personas">
+      <span>Personas:</span>
+      <span><span class="persona-badge" style="background:#C8498A"></span>Milagros</span>
+      <span><span class="persona-badge" style="background:#3B8FD4"></span>Pau</span>
+      <span><span class="persona-badge" style="background:#2E9E7A"></span>Fabián</span>
+      <span><span class="persona-badge" style="background:#B07A2A"></span>Julia</span>
+    </div>
+    <div class="legend">
+      <span class="tag tag-positivo">experiencia positiva</span>
+      <span class="tag tag-desafio">desafío académico</span>
+      <span class="tag tag-economico">contexto económico</span>
+      <span class="tag tag-logro">logro personal</span>
+      <span class="tag tag-pandemia">pandemia</span>
+      <span class="tag tag-social">hito sociohistórico</span>
+      <span class="tag tag-docente">vocación docente</span>
+    </div>
+    <div class="timeline">
+
+      <div class="tl-item"><div class="tl-dot" style="background:#888"></div>
+        <div class="tl-content border-social">
+          <div class="tl-year">1993</div>
+          <div class="tl-text"><span class="persona-badge" style="background:#B07A2A"></span><strong>Julia.</strong> CECOR/LECOR: cese de pago a estatales en Córdoba. La escuela en riesgo, la escuela como refugio. Primer impacto del ajuste sobre la escolaridad familiar.</div>
+          <span class="tag tag-economico">económico</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#888"></div>
+        <div class="tl-content border-social">
+          <div class="tl-year">1995</div>
+          <div class="tl-text"><span class="persona-badge" style="background:#B07A2A"></span><strong>Julia.</strong> Reforma educativa: desaparece el 7.° grado. Julia pasa de 6.° directamente al secundario. Los cambios de política educativa reconfiguran trayectorias sin consultar a quienes las viven.</div>
+          <span class="tag tag-social">hito sociohistórico</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#888"></div>
+        <div class="tl-content border-social">
+          <div class="tl-year">2001</div>
+          <div class="tl-text"><span class="persona-badge" style="background:#3B8FD4"></span><span class="persona-badge" style="background:#B07A2A"></span><strong>Pau / Julia.</strong> Crisis del 2001. Pau en jardín en Río Tercero — sus padres jóvenes, incertidumbre enorme. Julia egresa semanas antes del estallido y participa de un cacerolazo. La crisis económica como telón de fondo de los comienzos escolares.</div>
+          <span class="tag tag-social">hito sociohistórico</span>
+          <span class="tag tag-economico">económico</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#888"></div>
+        <div class="tl-content border-social">
+          <div class="tl-year">2002</div>
+          <div class="tl-text"><span class="persona-badge" style="background:#2E9E7A"></span><strong>Fabián.</strong> Repite cuarto grado en contexto de vulnerabilidad económica familiar. La pobreza como obstáculo concreto dentro del sistema educativo.</div>
+          <span class="tag tag-economico">económico</span>
+          <span class="tag tag-desafio">desafío académico</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#B07A2A"></div>
+        <div class="tl-content border-julia">
+          <div class="tl-year">2002–2004</div>
+          <div class="tl-text"><span class="persona-badge" style="background:#B07A2A"></span><strong>Julia.</strong> Inicia abogacía, crisis vocacional, pasa a Comunicación Social. Doble carrera simultánea. Explora talleres artísticos. La universidad pública como espacio de expansión y autodescubrimiento.</div>
+          <span class="tag tag-descubrimiento">descubrimiento</span>
+          <span class="tag tag-positivo">experiencia positiva</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#3B8FD4"></div>
+        <div class="tl-content border-pau">
+          <div class="tl-year">2003–2007</div>
+          <div class="tl-text"><span class="persona-badge" style="background:#3B8FD4"></span><strong>Pau.</strong> Maestra Karina y el cuaderno-diario en la primaria de Río Tercero. Primer contacto con la memoria colectiva como construcción entre todos. Una docente que habilita la escritura libre como herramienta.</div>
+          <span class="tag tag-positivo">experiencia positiva</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#2E9E7A"></div>
+        <div class="tl-content border-fabian">
+          <div class="tl-year">2009–2011</div>
+          <div class="tl-text"><span class="persona-badge" style="background:#2E9E7A"></span><strong>Fabián.</strong> IPEM 153: radio, producción audiovisual, feria de ciencias. Una escuela secundaria técnica que estimula, que descubre vocaciones, que construye comunidad. La comunicación como elección de vida.</div>
+          <span class="tag tag-descubrimiento">descubrimiento</span>
+          <span class="tag tag-positivo">experiencia positiva</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#B07A2A"></div>
+        <div class="tl-content border-julia">
+          <div class="tl-year">2011</div>
+          <div class="tl-text"><span class="persona-badge" style="background:#B07A2A"></span><strong>Julia.</strong> Se recibe de licenciada en Comunicación. Tesis sobre una escuela rural. Camino larguísimo desde el egreso secundario, vivido como hazaña y alivio profundo.</div>
+          <span class="tag tag-logro">logro</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#B07A2A"></div>
+        <div class="tl-content border-julia">
+          <div class="tl-year">2012</div>
+          <div class="tl-text"><span class="persona-badge" style="background:#B07A2A"></span><strong>Julia.</strong> Empieza a dar clases en el secundario. Descubre que ser docente le genera creatividad y entusiasmo. Primera aparición explícita de la vocación docente.</div>
+          <span class="tag tag-docente">vocación docente</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#2E9E7A"></div>
+        <div class="tl-content border-fabian">
+          <div class="tl-year">2012</div>
+          <div class="tl-text"><span class="persona-badge" style="background:#2E9E7A"></span><strong>Fabián.</strong> Ingresa a la ECI-UNC. Primer miembro de su familia en llegar a la universidad. Las necesidades económicas tensionan la continuidad desde el primer año.</div>
+          <span class="tag tag-logro">logro</span>
+          <span class="tag tag-economico">económico</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#C8498A"></div>
+        <div class="tl-content border-mila">
+          <div class="tl-year">2012</div>
+          <div class="tl-text"><span class="persona-badge" style="background:#C8498A"></span><strong>Milagros.</strong> Implementación del Boleto Educativo Gratuito en Córdoba. Política pública que facilita el acceso y la permanencia en la educación.</div>
+          <span class="tag tag-social">hito sociohistórico</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#C8498A"></div>
+        <div class="tl-content border-mila">
+          <div class="tl-year">2013</div>
+          <div class="tl-text"><span class="persona-badge" style="background:#C8498A"></span><strong>Milagros.</strong> Comienza el secundario. Saqueos de diciembre. Adaptación dura pero con docentes que acompañan. La contención de los profesores como factor decisivo en la permanencia.</div>
+          <span class="tag tag-social">hito sociohistórico</span>
+          <span class="tag tag-positivo">experiencia positiva</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#3B8FD4"></div>
+        <div class="tl-content border-pau">
+          <div class="tl-year">2010–2015</div>
+          <div class="tl-text"><span class="persona-badge" style="background:#3B8FD4"></span><strong>Pau.</strong> Secundario en el Instituto Carlos Saavedra Lamas: presidenta del centro de estudiantes, Modelos ONU, exámenes internacionales, becada. Un test vocacional la conduce a Comunicación Social.</div>
+          <span class="tag tag-descubrimiento">descubrimiento</span>
+          <span class="tag tag-positivo">experiencia positiva</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#888"></div>
+        <div class="tl-content border-social">
+          <div class="tl-year">2015</div>
+          <div class="tl-text"><span class="persona-badge" style="background:#C8498A"></span><strong>Hito político compartido.</strong> Macri gana las elecciones presidenciales.</div>
+          <span class="tag tag-social">hito sociohistórico</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#3B8FD4"></div>
+        <div class="tl-content border-pau">
+          <div class="tl-year">2016</div>
+          <div class="tl-text"><span class="persona-badge" style="background:#3B8FD4"></span><strong>Pau.</strong> Se muda a Córdoba capital e ingresa a la universidad pública. Lo vive como un respiro necesario que la saca de la ignorancia y la hace mejor persona. La universidad pública como apertura de mundo.</div>
+          <span class="tag tag-descubrimiento">descubrimiento</span>
+          <span class="tag tag-positivo">experiencia positiva</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#B07A2A"></div>
+        <div class="tl-content border-julia">
+          <div class="tl-year">2016</div>
+          <div class="tl-text"><span class="persona-badge" style="background:#B07A2A"></span><strong>Julia.</strong> Intenta el profesorado universitario con hijo pequeño. Sin régimen para estudiante con familiar a cargo. La exigencia institucional choca con la maternidad y el trabajo. Lo deja al año siguiente.</div>
+          <span class="tag tag-desafio">desafío académico</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#888"></div>
+        <div class="tl-content border-social">
+          <div class="tl-year">2018</div>
+          <div class="tl-text"><span class="persona-badge" style="background:#C8498A"></span><span class="persona-badge" style="background:#2E9E7A"></span><strong>Milagros / Fabián.</strong> Conflicto gobierno Macri–universidades públicas. El Pabellón Argentina de la UNC tomado. La universidad en disputa como primer umbral de la vida universitaria.</div>
+          <span class="tag tag-desafio">desafío académico</span>
+          <span class="tag tag-social">hito sociohistórico</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#888"></div>
+        <div class="tl-content border-social">
+          <div class="tl-year">2020</div>
+          <div class="tl-text"><span class="persona-badge" style="background:#C8498A"></span><span class="persona-badge" style="background:#3B8FD4"></span><span class="persona-badge" style="background:#2E9E7A"></span><span class="persona-badge" style="background:#B07A2A"></span><strong>Los cuatro.</strong> Pandemia Covid-19. Virtualidad forzada. Fallecimiento de Maradona. Una experiencia que los formatea para siempre como estudiantes y como personas.</div>
+          <span class="tag tag-pandemia">pandemia</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#3B8FD4"></div>
+        <div class="tl-content border-pau">
+          <div class="tl-year">2021</div>
+          <div class="tl-text"><span class="persona-badge" style="background:#3B8FD4"></span><strong>Pau.</strong> Ya licenciada y trabajando. La carrera universitaria concluida en la pospandemia.</div>
+          <span class="tag tag-logro">logro</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#888"></div>
+        <div class="tl-content border-social">
+          <div class="tl-year">2022</div>
+          <div class="tl-text"><span class="persona-badge" style="background:#C8498A"></span><span class="persona-badge" style="background:#3B8FD4"></span><span class="persona-badge" style="background:#2E9E7A"></span><span class="persona-badge" style="background:#B07A2A"></span><strong>Los cuatro.</strong> Argentina campeón del mundo. Messi levanta la copa. Alegría colectiva compartida.</div>
+          <span class="tag tag-social">hito sociohistórico</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#2E9E7A"></div>
+        <div class="tl-content border-fabian">
+          <div class="tl-year">2023</div>
+          <div class="tl-text"><span class="persona-badge" style="background:#2E9E7A"></span><strong>Fabián.</strong> Aprueba Comunicación Institucional después de 6 años. La materia que lo había expulsado de la carrera en 2017. Desde ahí no para.</div>
+          <span class="tag tag-logro">logro</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#888"></div>
+        <div class="tl-content border-social">
+          <div class="tl-year">2023</div>
+          <div class="tl-text"><span class="persona-badge" style="background:#C8498A"></span><span class="persona-badge" style="background:#3B8FD4"></span><span class="persona-badge" style="background:#2E9E7A"></span><span class="persona-badge" style="background:#B07A2A"></span><strong>Los cuatro.</strong> Milei gana las elecciones. Polarización, temor en docentes y estudiantes, caída económica abrupta. Los proyectos vitales y laborales de todos se ven afectados.</div>
+          <span class="tag tag-social">hito sociohistórico</span>
+          <span class="tag tag-economico">económico</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#888"></div>
+        <div class="tl-content border-social">
+          <div class="tl-year">2024</div>
+          <div class="tl-text"><span class="persona-badge" style="background:#C8498A"></span><span class="persona-badge" style="background:#2E9E7A"></span><span class="persona-badge" style="background:#B07A2A"></span><strong>Milagros / Fabián / Julia.</strong> Dos marchas federales en defensa de la educación pública. Plan de ajuste y vaciamiento del Estado. La precariedad laboral docente como condición de fondo.</div>
+          <span class="tag tag-social">hito sociohistórico</span>
+          <span class="tag tag-desafio">desafío académico</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#5D4BB5"></div>
+        <div class="tl-content border-todos">
+          <div class="tl-year">2025</div>
+          <div class="tl-text"><span class="persona-badge" style="background:#C8498A"></span><span class="persona-badge" style="background:#2E9E7A"></span><strong>Milagros y Fabián — logro compartido.</strong> Obtienen su título universitario en el peor contexto posible. Fabián: primer graduado de su familia, nacido en pobreza extrema. Milagros: su primer título universitario. El esfuerzo sostenido durante años culmina en una meta concreta.</div>
+          <span class="tag tag-logro">logro</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#5D4BB5"></div>
+        <div class="tl-content border-todos">
+          <div class="tl-year">2025</div>
+          <div class="tl-text"><span class="persona-badge" style="background:#B07A2A"></span><strong>Julia — retoma el profesorado.</strong> Con hijo, viviendo fuera de Córdoba, trabajando precarizadamente. El nivel de exigencia y el volumen de bibliografía resultan casi excluyentes. Lo sostiene con muchísimo esfuerzo. Promociona una materia. Vislumbra volver a las aulas y a lo público.</div>
+          <span class="tag tag-docente">vocación docente</span>
+          <span class="tag tag-desafio">desafío académico</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#5D4BB5"></div>
+        <div class="tl-content border-todos">
+          <div class="tl-year">2025</div>
+          <div class="tl-text"><span class="persona-badge" style="background:#C8498A"></span><strong>Milagros — inicia el profesorado por primera vez.</strong> Recién recibida, empieza la formación docente. Un camino nuevo que empieza justo donde terminó otro.</div>
+          <span class="tag tag-docente">vocación docente</span>
+          <span class="tag tag-descubrimiento">descubrimiento</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#2E9E7A"></div>
+        <div class="tl-content border-fabian">
+          <div class="tl-year">2026</div>
+          <div class="tl-text"><span class="persona-badge" style="background:#2E9E7A"></span><strong>Fabián.</strong> Empieza el profesorado universitario en Comunicación Social. Se imagina construyendo conocimiento con CENMA. Quiere ser profe.</div>
+          <span class="tag tag-docente">vocación docente</span>
+          <span class="tag tag-descubrimiento">descubrimiento</span>
+        </div>
+      </div>
+
+      <div class="tl-item"><div class="tl-dot" style="background:#5D4BB5"></div>
+        <div class="tl-content border-todos">
+          <div class="tl-year">2025–2026</div>
+          <div class="tl-text"><span class="persona-badge" style="background:#C8498A"></span><span class="persona-badge" style="background:#2E9E7A"></span><span class="persona-badge" style="background:#B07A2A"></span><strong>Milagros, Fabián y Julia — vocación docente compartida.</strong> Tres trayectorias muy distintas convergen en el mismo deseo: aprender a enseñar, construir conocimiento con otrxs, estar en las aulas. En la peor coyuntura posible, eligen la educación pública.</div>
+          <span class="tag tag-docente">vocación docente</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  function show(id, btn) {
+    document.querySelectorAll('.tl-section').forEach(s => s.classList.remove('visible'));
+    document.querySelectorAll('.tl-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('sec-' + id).classList.add('visible');
+    btn.classList.add('active');
+  }
+</script>
+
+</body>
+</html>
